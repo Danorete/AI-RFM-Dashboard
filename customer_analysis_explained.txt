@@ -1,0 +1,237 @@
+============================================================
+CUSTOMER PURCHASE BEHAVIOR & SEGMENTATION ANALYSIS
+Code Explanation
+============================================================
+This file explains exactly what the customer_analysis.py code does,
+step by step.
+------------------------------------------------------------
+THE BIG PICTURE
+------------------------------------------------------------
+I took a dataset of over 1 million retail transactions and used it
+to figure out which customers are the most valuable. I grouped
+customers into 5 categories based on their buying behavior. This
+technique is called RFM Analysis, and it is used by real companies
+every day to make decisions about marketing, retention, and inventory.
+
+My key finding: the top 20% of customers drive 77.2% of all revenue.
+
+------------------------------------------------------------
+WHAT IS A DATAFRAME?
+------------------------------------------------------------
+Before anything else, you need to know what a DataFrame is.
+Think of it as a table (like an Excel spreadsheet) but inside Python.
+It has rows and columns. Every time you see "df" in the code,
+that is the DataFrame I are working with.
+"df" is just a nickname I gave it. I could have called it anything.
+------------------------------------------------------------
+STEP 1: IMPORTING LIBRARIES
+------------------------------------------------------------
+Code:
+    import pandas as pd
+
+A library is a collection of pre-written code that someone else
+built so you do not have to build it yourself. Pandas is the most
+popular data analysis library in Python. It gives us tools to load,
+clean, and analyze data. The "as pd" part is just a shortcut --
+instead of typing "pandas" every time I want to use it, I just type "pd".
+------------------------------------------------------------
+STEP 2: LOADING THE DATA
+------------------------------------------------------------
+Code:
+    file_path = r"C:\Users\danor\...\online_retail_II.csv"
+    df = pd.read_csv(file_path, encoding="latin-1")
+
+file_path is a variable that stores the location of my data file
+on the computer. Think of it like a home address. Python needs
+to know exactly where to find the file.
+
+pd.read_csv() opens the CSV file and loads it into a DataFrame.
+The encoding="latin-1" part tells Python how to read special
+characters in the file (like accented letters). Without this,
+Python would throw an error because it would not understand
+some of the characters in the data.
+
+After this step, my DataFrame has 1,067,371 rows and 8 columns.
+Each row is one line item from a transaction.
+------------------------------------------------------------
+STEP 3: EXPLORING THE DATA (EDA)
+------------------------------------------------------------
+Code:
+    print(df.columns.tolist())
+    print(df.dtypes)
+    print(df.isnull().sum())
+
+This step is called Exploratory Data Analysis (or EDA). Before you
+clean or analyze anything, you need to understand what you are
+working with. Think of it like looking through a box before
+organizing it, you need to see what is inside first.
+
+df.columns.tolist() shows all the column names:
+Invoice, StockCode, Description, Quantity, InvoiceDate,
+Price, Customer ID, Country.
+
+df.dtypes shows what type of data is in each column.
+For example, Quantity is an integer (whole number),
+Price is a float (decimal number), and Invoice is a string (text).
+
+df.isnull().sum() counts how many missing values are in each column.
+I found that 243,007 rows had no Customer ID and
+4,382 rows had no Description. This tells us what I need to fix.
+------------------------------------------------------------
+STEP 4: CLEANING THE DATA
+------------------------------------------------------------
+This is the most important step. Real data is messy. Your job as
+an analyst is to make it usable. I did 5 things here:
+
+1. DROP ROWS WITH NO CUSTOMER ID
+   Code: df = df.dropna(subset=["Customer ID"])
+   If a row has no Customer ID, I cannot connect that transaction
+   to a customer. It is useless for my analysis, so I remove it.
+   This removed 243,007 rows.
+
+2. REMOVE DUPLICATE ROWS
+   Code: df = df.drop_duplicates()
+   Sometimes data gets recorded twice by accident. Keeping duplicates
+   would inflate my numbers and give us incorrect results.
+
+3. REMOVE CANCELLED ORDERS
+   Code: df = df[~df["Invoice"].astype(str).str.startswith("C")]
+   In this dataset, any invoice that starts with the letter "C"
+   means the order was canceled. Canceled orders should not count
+   as purchases, so I filter them out. The "~" symbol means "NOT"
+   which keeps everything that does NOT start with "C".
+
+4. REMOVE NEGATIVE OR ZERO VALUES
+   Code: df = df[df["Quantity"] > 0]
+         df = df[df["Price"] > 0]
+   Negative quantities and prices are data errors. I only keep
+   rows where both values are greater than zero.
+
+5. CREATE A TOTALPRICE COLUMN
+   Code: df["TotalPrice"] = df["Quantity"] * df["Price"]
+   This creates a brand new column by multiplying Quantity by Price.
+   For example, if someone bought 3 items at $5 each, TotalPrice = $15.
+   This is called a derived column. It did not exist in the original
+   data, I calculated it.
+
+After cleaning, I went from 1,067,371 rows down to 779,425 rows.
+That is 287,946 rows removed because they were incomplete or invalid.
+------------------------------------------------------------
+STEP 5: BUILDING THE RFM TABLE
+------------------------------------------------------------
+Code:
+    rfm = df.groupby("Customer ID").agg(
+        Recency   = ("InvoiceDate", lambda x: (reference_date - x.max()).days),
+        Frequency = ("Invoice", "nunique"),
+        Monetary  = ("TotalPrice", "sum")
+    ).reset_index()
+
+RFM stands for Recency, Frequency, and Monetary. It is a framework
+used to measure how valuable each customer is based on three questions:
+
+RECENCY: How recently did this customer buy something?
+   A customer who bought last week is more valuable than one who
+   bought two years ago. Lower number of days = better.
+   I calculated this by finding each customer's most recent
+   purchase date and subtracting it from a reference date
+   (one day after the last transaction in the dataset).
+
+FREQUENCY: How often does this customer buy?
+   A customer who buys 20 times is more valuable than one who
+   bought once. Higher number = better.
+   I used "nunique" which counts the number of unique invoices
+   per customer -- meaning unique shopping trips, not individual items.
+
+MONETARY: How much money has this customer spent in total?
+   A customer who spent $5,000 is more valuable than one who spent $10.
+   Higher number = better.
+   I used "sum" to add up all the TotalPrice values per customer.
+
+groupby("Customer ID"), groups all 779,425 rows by customer so that
+each customer ends up as a single row with their R, F, and M values.
+The result is 5,878 rows which is one per unique customer.
+------------------------------------------------------------
+STEP 6: SCORING AND SEGMENTING CUSTOMERS
+------------------------------------------------------------
+Code:
+    rfm["R_Score"] = pd.qcut(rfm["Recency"], q=5, labels=[5,4,3,2,1])
+    rfm["F_Score"] = pd.qcut(rfm["Frequency"].rank(method="first"), q=5, labels=[1,2,3,4,5])
+    rfm["M_Score"] = pd.qcut(rfm["Monetary"].rank(method="first"), q=5, labels=[1,2,3,4,5])
+
+pd.qcut() divides customers into 5 equal groups based on their values.
+q=5 means 5 groups. Each customer gets a score from 1 to 5.
+
+For Recency, the labels are reversed [5,4,3,2,1] because a LOWER
+number of days since purchase is BETTER. So the most recent customers
+get a 5 and the least recent get a 1.
+
+For Frequency and Monetary, higher values are better so labels go
+[1,2,3,4,5] -- customers who buy more often and spend more get a 5.
+
+.rank(method="first") is used to handle ties. If two customers have
+the exact same Frequency, it assigns them different ranks so they
+do not have both end up in the same bucket.
+
+Then all three scores are added together:
+    rfm["RFM_Score"] = R_Score + F_Score + M_Score
+
+The maximum possible score is 15 (5+5+5) and the minimum is 3 (1+1+1).
+Customers are then placed into named segments:
+
+    Score 13-15: Champions       (your best customers)
+    Score 10-12: Loyal Customers (buy regularly, spend well)
+    Score  7-9:  At Risk         (used to be good, slowing down)
+    Score  4-6:  Needs Attention (low engagement)
+    Score  3:    Lost            (have not bought in a very long time)
+
+My results:
+    Needs Attention: 1,456 customers
+    At Risk:         1,453 customers
+    Loyal Customers: 1,357 customers
+    Champions:       1,295 customers
+    Lost:              317 customers
+------------------------------------------------------------
+STEP 7: KEY INSIGHT
+------------------------------------------------------------
+Code:
+    top_20_cutoff = rfm["Monetary"].quantile(0.80)
+    top_20_revenue = rfm[rfm["Monetary"] >= top_20_cutoff]["Monetary"].sum()
+    top_20_pct = (top_20_revenue / total_revenue) * 100
+
+quantile(0.80) finds the spending value that separates the top 20%
+of customers from the bottom 80%. Anyone at or above that value is
+in the top 20%.
+
+I then added up all the revenue from those top customers and divided
+by total revenue to get a percentage.
+
+Result: The top 20% of customers drive 77.2% of total revenue.
+
+This is a real business insight. It means the company should focus
+heavily on retaining its Champions and Loyal Customers because
+losing them would have a massive impact on revenue.
+------------------------------------------------------------
+STEP 8: EXPORTING RESULTS
+------------------------------------------------------------
+Code:
+    rfm.to_csv(output_path, index=False)
+
+This saves the final RFM table as a CSV file called rfm_results.csv
+in the Data Analytics Project folder. That file contains every
+customer, their R/F/M scores, and their segment label. This is
+what I would share with a stakeholder or load into Tableau to
+build visualizations.
+------------------------------------------------------------
+SUMMARY OF WHAT YOU ACCOMPLISHED
+------------------------------------------------------------
+1. Loaded 1,067,371 rows of real retail transaction data
+2. Cleaned it down to 779,425 usable rows
+3. Engineered a new column (TotalPrice) from existing data
+4. Grouped 779,425 rows into 5,878 unique customer profiles
+5. Scored each customer across 3 dimensions (R, F, M)
+6. Segmented all 5,878 customers into 5 named groups
+7. Identified that the top 20% of customers drive 77.2% of revenue
+8. Exported results to a CSV for further use in Tableau or SQL
+============================================================
+END OF EXPLANATION
+============================================================
