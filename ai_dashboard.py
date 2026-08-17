@@ -26,8 +26,15 @@ st.dataframe(df.head(20))
 
 st.subheader("Segment Distribution")
 if "Segment" in df.columns:
-    segment_counts = df["Segment"].value_counts()
-    st.bar_chart(segment_counts)
+    import altair as alt
+    seg = df["Segment"].value_counts().reset_index()
+    seg.columns = ["Segment", "Customers"]
+    chart = alt.Chart(seg).mark_bar().encode(
+        x=alt.X("Segment:N", sort="-y", axis=alt.Axis(labelAngle=0)),
+        y=alt.Y("Customers:Q"),
+        tooltip=["Segment", "Customers"]
+    )
+    st.altair_chart(chart, use_container_width=True)
 
 st.subheader("AI-Generated Insights")
 
