@@ -93,20 +93,37 @@ rfm["RFM_Score"] = (
     rfm["M_Score"].astype(int)
 )
 
-# Assign segment labels based on RFM score
-def assign_segment(score):
-    if score >= 13:
-        return "Champions"
-    elif score >= 10:
-        return "Loyal Customers"
-    elif score >= 7:
-        return "At Risk"
-    elif score >= 4:
-        return "Needs Attention"
-    else:
-        return "Lost"
+# Assign segment labels based on the R vs FM pattern
+def assign_segment(row):
+    r = int(row["R_Score"])
+    fm = (int(row["F_Score"]) + int(row["M_Score"])) / 2
 
-rfm["Segment"] = rfm["RFM_Score"].apply(assign_segment)
+    # Active and valuable
+    if r >= 4 and fm >= 4:
+        return "Champions"
+    if r >= 3 and fm >= 3:
+        return "Loyal Customers"
+    if r >= 4 and fm >= 2:
+        return "Potential Loyalists"
+    if r >= 4:
+        return "New Customers"
+
+    # Lapsed, ordered by what's at stake
+    if r <= 2 and fm >= 4:
+        return "Can't Lose Them"
+    if r <= 2 and fm >= 3:
+        return "At Risk"
+
+    # Cooling off
+    if r == 3 and fm >= 2:
+        return "Needs Attention"
+    if r == 3:
+        return "About to Sleep"
+    if fm >= 2:
+        return "Hibernating"
+    return "Lost"
+
+rfm["Segment"] = rfm.apply(assign_segment, axis=1)
 
 print("\n--- Segment Distribution ---")
 print(rfm["Segment"].value_counts())
