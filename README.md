@@ -9,7 +9,7 @@ An AI-powered customer segmentation dashboard that combines RFM
 automated business insights and marketing recommendations.
 
 ## Features
-- RFM customer segmentation across 5,878 customers
+- Pattern-based RFM segmentation into 10 behavioral segments across 5,878 customers
 - Interactive segment distribution charts
 - AI-generated business insights powered by Claude API
 - Actionable marketing recommendations per segment
