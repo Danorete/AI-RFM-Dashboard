@@ -33,4 +33,4 @@ streamlit run ai_dashboard.py
 ```
 
 ## Dataset
-UCI Online Retail II dataset: 500K+ transactions used for RFM analysis.
+UCI Online Retail II dataset: 1,067,371 transactions used for RFM analysis
