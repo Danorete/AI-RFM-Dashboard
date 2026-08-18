@@ -4,7 +4,7 @@ import pandas as pd
 # STEP 1: LOAD THE DATA
 # ============================================================
 # Update this path to match where your file is saved
-file_path = r"C:\Users\danor\OneDrive\Desktop\PyCharm_CIS3260\Project1\Data Analytics Project\online_retail_II.csv"
+file_path = r"C:\Users\danor\OneDrive\Desktop\PyCharm_CIS3260\Project1\Data Analytics Project\AI Dashboard for Customer Analysis\online_retail_II.csv"
 
 print("Loading data... this may take a moment due to file size.")
 df = pd.read_csv(file_path, encoding="latin-1")
