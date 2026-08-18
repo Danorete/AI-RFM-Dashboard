@@ -1,5 +1,9 @@
 ## AI-RFM-Dashboard
 
+**[Live Demo](https://ore-rfm-dashboard.streamlit.app/)** | Python · Streamlit · Claude API
+
+![Dashboard](rfm-dashboard.png)
+
 An AI-powered customer segmentation dashboard that combines RFM 
 (Recency, Frequency, Monetary) analysis with Claude AI to generate 
 automated business insights and marketing recommendations.
